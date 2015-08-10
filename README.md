@@ -43,7 +43,9 @@ getSessionsBySpeaker: This method returns all sessions across all conferences, q
 ####Class Implementations:
 The session was created as a child of Conference. This helped neatly tie the inheritance and helped query by the ancestor dependancy.
 The speaker was implemented as a simple field for the existing Session Entity. For the functional requirements of the project, it appeared reasonable not to separate this out into a separte entity and complicate the endpoint tie up (requirement for a parent/child relationship between Session and Speaker). This follows the KISS principle.
+
 _Updates based on code review_
+
 The SessionForm class was implemented with all static variables as a StringField. This was largely based on the fact that strings are more generic and can handle most of the input/output.
 The Session class had the name of the session mandatory. All the entity properties were stored as strings except for 'date' and 'startTime'. This allowed for using conditional validation/comparison 
 (with >, < & ==) of the stored data and user supplied or other criteria
