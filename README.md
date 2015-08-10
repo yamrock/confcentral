@@ -65,6 +65,7 @@ In that case, the speaker was added to memcache as a featured speaker and the se
 and the speaker.
 
 getFeaturedSpeaker: This is an endpoint implementation to retrive data from the memcache for the featured speaker
-_Udates based on code review_
+
+_Updates based on code review_
 
 The memcache is set by offloading to a task. The featured speaker is passed to the task as a parameter. The task is added to the default queue and executed via the main.py module, calling the SetFeaturedSpeaker post function. 
