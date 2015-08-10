@@ -55,6 +55,7 @@ ANNOUNCEMENT_TPL = ('Last chance to attend! The following conferences '
                     'are nearly sold out: %s')
 MEMCACHE_FEATUREDSPKR_KEY = "FEATURED_SPEAKER"
 SPKR_TPL = ('These sessions will have our featured speaker %s: %s, %s')
+SPEAKER = " "
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -485,6 +486,23 @@ class ConferenceApi(remote.Service):
 
 # - - - Featured Speaker - - - - - - - - - - - - - - - - - - - -
 #TASK 4
+    @staticmethod
+    def _setCacheFeaturedSpkr(fspkr):
+        """Set the Featured Speaker cache announcement
+        This is called by the SetFeaturedSpeaker taskqueue handler from main.py
+
+        """
+        q = Session.query()
+        featured_sessions = q.filter(Session.speaker == fspkr).fetch()
+        featured_speaker = fspkr
+        # If the speaker matches criteria, add the details to the memcache
+        # The new query doesnt seem to inculde the latest entity
+        # Resorted to useing data['name'] as a workaround
+        speaker_announcement = SPKR_TPL % (featured_speaker,
+                ','.join(sess.name for sess in featured_sessions), fspkr)
+        memcache.set(MEMCACHE_FEATUREDSPKR_KEY, speaker_announcement)
+        return speaker_announcement
+
 
     @endpoints.method(message_types.VoidMessage, StringMessage,
             path='sessions/featuredspeaker/get',
@@ -671,15 +689,11 @@ class ConferenceApi(remote.Service):
         #Check if the speaker already exists
         q = Session.query()
         if (q.filter(Session.speaker == data['speaker']).count() >= 1 ):
-            q = Session.query()
-            featured_sessions = q.filter(Session.speaker == data['speaker']).fetch()
-            featured_speaker = data['speaker']
-            # If the speaker matches criteria, add the details to the memcache
-            # The new query doesnt seem to inculde the latest entity
-            # Resorted to useing data['name'] as a workaround
-            speaker_announcement = SPKR_TPL % (featured_speaker,
-                    ','.join(sess.name for sess in featured_sessions), data['name'])
-            memcache.set(MEMCACHE_FEATUREDSPKR_KEY, speaker_announcement)
+            #Off load setting memcache to a taskqueue. Send the speaker
+            #name to the task. This will then be used by _setCacheFeaturedSpkr
+            taskqueue.add( params={'featured_spkr':data['speaker']},
+                    url = '/tasks/set_featured_speaker'
+                    )
 
         return self._copySessionToForm(session.get())
 
@@ -786,6 +800,10 @@ class ConferenceApi(remote.Service):
         #Validate that the SessionKey (urlsafe key) is provided
         if not request.SessionKey:
             raise endpoints.BadRequestException("SessionKey field required") 
+        #Validate whether the requested SessionKey is already in the user's wishlist
+        q = SessionWishlist.query()
+        if (q.filter(SessionWishlist.sessionKey == request.SessionKey).count() > 0):
+                raise endpoints.BadRequestException("SessionKey is already in %s's wishlist" % user)
         #Generate a Wishlist key to store the user wishlist. The wishlist will be created as
         #a child of Profile
         p_key = ndb.Key(Profile, user_id)
