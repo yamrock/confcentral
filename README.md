@@ -63,4 +63,8 @@ sessionsMultipleInequalitiesFilter: This method explores the possibility of how 
 Everytime a new session is created in the _createSessionObject method, a query is executed right after to validate whether the speaker for the session is presenting at more than one session.
 In that case, the speaker was added to memcache as a featured speaker and the sessions he/she was presenting was also presented. This can be used as an inexpensive way to highlight sessions
 and the speaker.
+
 getFeaturedSpeaker: This is an endpoint implementation to retrive data from the memcache for the featured speaker
+_Udates based on code review_
+
+The memcache is set by offloading to a task. The featured speaker is passed to the task as a parameter. The task is added to the default queue and executed via the main.py module, calling the SetFeaturedSpeaker post function. 
